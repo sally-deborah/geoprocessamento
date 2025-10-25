@@ -3,26 +3,42 @@
 # Autor: Eng. Florestal MSc. Sally Deborah P. da Silva
 # Descrição: Converte coordenadas em graus, minutos e segundos (DMS)
 #            para graus decimais (latitude/longitude) e coordenadas UTM.
-#            Gera dois arquivos CSV: um em coordenadas geográficas
-#            (para uso em KML) e outro em coordenadas UTM.
+#            Detecta automaticamente separador e encoding do CSV.
+#            Gera dois arquivos: um em coordenadas geográficas (para KML)
+#            e outro em coordenadas UTM.
 # Linguagem: Python
-# Dependências: pandas, pyproj, re
+# Dependências: pandas, pyproj, re, chardet
 # Data: 2025-10-25
 # ================================================================
 
 import pandas as pd
 import re
 import os
+import chardet
 from pyproj import Transformer, CRS
 
 # --------------------
-# 1. LEITURA DO ARQUIVO
+# 1. LEITURA ROBUSTA DO ARQUIVO
 # --------------------
 file_path = input("Informe o caminho completo do arquivo CSV: ").strip()
 if not os.path.isfile(file_path):
     raise FileNotFoundError(f"Arquivo não encontrado: {file_path}")
 
-df = pd.read_csv(file_path, sep=';', encoding='utf-8-sig', quotechar='"')
+# Detecta encoding automaticamente
+with open(file_path, 'rb') as f:
+    raw_data = f.read(4096)
+encoding_detected = chardet.detect(raw_data)['encoding'] or 'utf-8-sig'
+
+# Detecta separador provável
+with open(file_path, 'r', encoding=encoding_detected, errors='ignore') as f:
+    first_line = f.readline()
+sep = ';' if first_line.count(';') > first_line.count(',') else ','
+
+print(f"→ Encoding detectado: {encoding_detected}")
+print(f"→ Separador detectado: '{sep}'")
+
+# Lê o CSV
+df = pd.read_csv(file_path, sep=sep, encoding=encoding_detected, quotechar='"')
 df.columns = ['ponto', 'lat', 'long', 'alt', 'sigmaLat', 'sigmaLong', 'sigmaAlt']
 
 # --------------------
@@ -42,7 +58,7 @@ df['long'] = df['long'].apply(normalizar_dms)
 # 3. CONVERSÃO DMS → GRAUS DECIMAIS
 # --------------------
 def dms_string_to_decimal(dms_str: str) -> float:
-    """Converte uma string DMS (graus°min'seg") em graus decimais."""
+    """Converte string DMS (graus°min'seg") em graus decimais."""
     match = re.match(r"(-?\d+)°(\d+)'([\d\.]+)\"", dms_str)
     if not match:
         raise ValueError(f"Formato inválido: {dms_str}")
@@ -79,6 +95,7 @@ csv_utm = os.path.join(output_dir, "coordenadas_utm.csv")
 df[['ponto', 'latitude', 'longitude', 'alt']].to_csv(csv_kml, index=False)
 df[['ponto', 'utm_zone', 'utm_hemisphere', 'utm_easting', 'utm_northing', 'alt']].to_csv(csv_utm, index=False)
 
-print(f"\nConversão concluída!")
-print(f"Arquivo KML salvo em: {csv_kml}")
-print(f"Arquivo UTM salvo em: {csv_utm}")
+print("\nConversão concluída com sucesso!")
+print(f"→ Arquivo KML salvo em: {csv_kml}")
+print(f"→ Arquivo UTM salvo em: {csv_utm}")
+
