@@ -1,9 +1,30 @@
+# ================================================================
+# Script: reproject_shapefile_utm.py
+# Autor: Eng. Florestal MSc. Sally Deborah P. da Silva
+# Descrição: Reprojeta um shapefile de coordenadas geográficas (EPSG:4326)
+#            para o sistema métrico UTM (EPSG:32721 - WGS 84 / UTM zone 21S).
+# Linguagem: Python
+# Dependência: geopandas
+# Data: 2025-10-25
+# ================================================================
+
 import geopandas as gpd
+from pathlib import Path
 
-# caminho pro SHP que tá em 4326
-shp_path = r"D:\01-TESE\03-Capitulo_IV\09-ortomosaicos\07-camadas_raster_120m\shps\estressadas.shp"
+# --------------------
+# ENTRADA
+# --------------------
+# caminho do shapefile original (em EPSG:4326)
+shp_path = Path(r"D:\.shp")
 
+# --------------------
+# PROCESSAMENTO
+# --------------------
 gdf = gpd.read_file(shp_path)
-gdf = gdf.to_crs("EPSG:32721")
+gdf = gdf.to_crs("EPSG:32721")  # reprojeta para UTM 21S (sul do Brasil)
+
+# --------------------
+# SAÍDA
+# --------------------
 gdf.to_file(shp_path, driver="ESRI Shapefile")
-print("Reprojeção concluída.")
+print(f"Reprojeção concluída: {shp_path.name} → EPSG:32721")
